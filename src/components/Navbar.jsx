@@ -17,7 +17,7 @@ export default function Navbar() {
 
         <div className="hidden items-center gap-2 md:flex">
           <a
-            href="#library"
+            href="/#library"
             className="rounded-full bg-[#ccff00] px-5 py-2 text-sm font-bold text-black"
           >
             Workouts
