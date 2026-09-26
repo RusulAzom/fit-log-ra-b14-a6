@@ -23,7 +23,7 @@ export default function Navbar() {
             Workouts
           </a>
           <a
-            href="#"
+            href="/my-plan"
             className="rounded-full px-5 py-2 text-sm font-semibold text-neutral-400 transition hover:bg-white/5 hover:text-white"
           >
             My Plan
