@@ -8,23 +8,18 @@ import { Bookmark, BookmarkCheck, Check, Plus, Star } from 'lucide-react';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import { getWorkoutById } from '../../../services/api';
-import { useWorkouts } from '../../../context/WorkoutContext';
+import { PLAN_LIMIT, useWorkouts } from '../../../context/WorkoutContext';
 
 const FALLBACK_IMAGE = '/imgs/workout.jpg';
 
-export default function WorkoutDetailsPage() {
-  const params = useParams();
-  const id = params?.id;
+export default function WorkoutDetailsPage({ params }) {
+  // The App Router passes the dynamic segment in through `params`; useParams()
+  // keeps the id available during client-side navigations too.
+  const routeParams = useParams();
+  const id = params?.id ?? routeParams?.id;
   const [workout, setWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
-  const {
-    plan,
-    saved,
-    addToPlan,
-    saveForLater,
-    removeFromPlan,
-    removeFromSaved,
-  } = useWorkouts();
+  const { plan, saved, addToPlan, saveForLater } = useWorkouts();
 
   useEffect(() => {
     if (!id) return undefined;
@@ -57,6 +52,10 @@ export default function WorkoutDetailsPage() {
   const inPlan = Boolean(workout) && plan.some((item) => item.id === workout.id);
   const isSaved =
     Boolean(workout) && saved.some((item) => item.id === workout.id);
+  // "Add to today's plan" is disabled once the lift is already planned or the
+  // five-lift cap is reached; "Save for later" is disabled once it is saved.
+  const planFull = plan.length >= PLAN_LIMIT;
+  const planDisabled = inPlan || planFull;
 
   const specs = workout
     ? [
@@ -193,43 +192,65 @@ export default function WorkoutDetailsPage() {
               </section>
 
               {/* Actions */}
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() =>
-                    inPlan ? removeFromPlan(workout.id) : addToPlan(workout)
-                  }
-                  className={
-                    inPlan
-                      ? 'inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[#ccff00]/60 bg-[#ccff00]/10 px-6 py-4 text-sm font-black text-[#ccff00] transition hover:bg-[#ccff00]/20'
-                      : 'inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#ccff00] px-6 py-4 text-sm font-black text-black transition hover:brightness-95'
-                  }
-                >
-                  {inPlan ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                  {inPlan ? 'In today’s plan' : 'Add to today’s plan'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    isSaved ? removeFromSaved(workout.id) : saveForLater(workout)
-                  }
-                  className={
-                    isSaved
-                      ? 'inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-white/40 bg-white/5 px-6 py-4 text-sm font-bold text-white transition hover:bg-white/10'
-                      : 'inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-white/20 bg-[#121212] px-6 py-4 text-sm font-bold text-white transition hover:border-white/40 hover:bg-white/5'
-                  }
-                >
-                  {isSaved ? (
-                    <BookmarkCheck className="h-4 w-4" />
-                  ) : (
-                    <Bookmark className="h-4 w-4" />
-                  )}
-                  {isSaved ? 'Saved for later' : 'Save for later'}
-                </button>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => addToPlan(workout)}
+                    disabled={planDisabled}
+                    className={
+                      planDisabled
+                        ? 'inline-flex flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-full bg-[#ccff00]/35 px-6 py-4 text-sm font-black text-black/60'
+                        : 'inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#ccff00] px-6 py-4 text-sm font-black text-black transition hover:brightness-95'
+                    }
+                  >
+                    {inPlan ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                    Add to today&apos;s plan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => saveForLater(workout)}
+                    disabled={isSaved}
+                    className={
+                      isSaved
+                        ? 'inline-flex flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/10 bg-[#121212] px-6 py-4 text-sm font-bold text-neutral-500'
+                        : 'inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-white/20 bg-[#121212] px-6 py-4 text-sm font-bold text-white transition hover:border-white/40 hover:bg-white/5'
+                    }
+                  >
+                    {isSaved ? (
+                      <BookmarkCheck className="h-4 w-4" />
+                    ) : (
+                      <Bookmark className="h-4 w-4" />
+                    )}
+                    Save for later
+                  </button>
+                </div>
+
+                {/* Why a button is disabled */}
+                {(inPlan || planFull || isSaved) && (
+                  <div className="flex flex-col gap-1.5">
+                    {inPlan && (
+                      <p className="text-xs font-semibold text-emerald-400">
+                        Already in today&apos;s plan — track it from My Plan.
+                      </p>
+                    )}
+                    {!inPlan && planFull && (
+                      <p className="text-xs font-semibold text-amber-400">
+                        Today&apos;s plan holds {PLAN_LIMIT} lifts and it is full —
+                        remove one from My Plan first.
+                      </p>
+                    )}
+                    {isSaved && (
+                      <p className="text-xs font-semibold text-neutral-500">
+                        Saved for later — find it under the Saved tab on My Plan.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -240,4 +261,3 @@ export default function WorkoutDetailsPage() {
     </>
   );
 }
-

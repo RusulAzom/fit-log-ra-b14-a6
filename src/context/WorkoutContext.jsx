@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 const STORAGE_KEY = 'fitlog-state';
-const PLAN_LIMIT = 5;
+export const PLAN_LIMIT = 5;
 
 const WorkoutContext = createContext(null);
 

@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, Clock, Flame, Star, X } from 'lucide-react';
+import { Check, Clock, Flame, Loader2, Star, X } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EmptyState from '../../components/EmptyState';
-import { useWorkouts } from '../../context/WorkoutContext';
+import { PLAN_LIMIT, useWorkouts } from '../../context/WorkoutContext';
 
 const FALLBACK_IMAGE = '/imgs/workout.jpg';
 
@@ -68,6 +68,11 @@ export default function MyPlanPage() {
           <p className="mt-3 text-sm text-neutral-400 sm:text-base">
             Cap of five lifts for today. Finish them, then load more.
           </p>
+          {hydrated && plan.length >= PLAN_LIMIT && (
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-bold text-amber-400">
+              Plan full — {plan.length} of {PLAN_LIMIT} lifts
+            </p>
+          )}
         </header>
 
         {/* Metrics summary */}
@@ -115,15 +120,16 @@ export default function MyPlanPage() {
           ))}
         </div>
 
-        {/* Hydration placeholder */}
+        {/* Loading state — plan/saved hydrate from localStorage on the client */}
         {!hydrated && (
-          <div className="mt-6 flex flex-col gap-4" aria-busy="true">
-            {[0, 1].map((row) => (
-              <div
-                key={row}
-                className="h-32 w-full animate-pulse rounded-2xl border border-white/10 bg-white/5"
-              />
-            ))}
+          <div
+            className="mt-6 flex flex-col items-center justify-center gap-3 rounded-2xl border border-white/10 bg-[#18181b] px-6 py-16"
+            aria-busy="true"
+          >
+            <Loader2 className="h-7 w-7 animate-spin text-[#ccff00]" />
+            <p className="text-sm font-semibold text-neutral-400">
+              Loading workouts...
+            </p>
           </div>
         )}
 
