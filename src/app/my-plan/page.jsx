@@ -68,17 +68,30 @@ export default function MyPlanPage() {
     (option) => option.value === sortBy
   )?.label;
 
+  const toNumber = (value) => {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  // Metrics always describe whichever tab is active, and tolerate either field
+  // naming used by the API (`duration`/`time`, `caloriesBurned`/`calories`).
+  const totalExercises = items.length;
+  const totalMinutes = items.reduce(
+    (total, item) => total + toNumber(item.duration ?? item.time),
+    0
+  );
+  const totalCalories = items.reduce(
+    (total, item) => total + toNumber(item.caloriesBurned ?? item.calories),
+    0
+  );
+
   const metrics = [
-    { label: 'Exercises', value: plan.length, accent: true },
-    {
-      label: 'Minutes',
-      value: plan.reduce((total, item) => total + (item.duration ?? 0), 0),
-    },
-    {
-      label: 'Calories',
-      value: plan.reduce((total, item) => total + (item.caloriesBurned ?? 0), 0),
-    },
+    { label: 'Exercises', value: totalExercises, accent: true },
+    { label: 'Minutes', value: totalMinutes },
+    { label: 'Calories', value: totalCalories },
   ];
+
+  const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label;
 
   const handleImageError = (event) => {
     event.currentTarget.src = FALLBACK_IMAGE;
@@ -121,28 +134,34 @@ export default function MyPlanPage() {
           )}
         </header>
 
-        {/* Metrics summary */}
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {metrics.map((metric) => (
-            <div
-              key={metric.label}
-              className="rounded-2xl border border-white/10 bg-[#18181b] p-5"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
-                {metric.label}
-              </p>
-              <p
-                className={
-                  metric.accent
-                    ? 'mt-2 text-3xl font-black text-[#ccff00]'
-                    : 'mt-2 text-3xl font-black text-white'
-                }
+        {/* Metrics summary - always scoped to the active tab */}
+        <section className="mt-8" aria-label="Summary metrics">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+            {activeTabLabel} summary
+          </p>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {metrics.map((metric) => (
+              <div
+                key={metric.label}
+                className="rounded-2xl border border-white/10 bg-[#18181b] p-5"
               >
-                {metric.value}
-              </p>
-            </div>
-          ))}
-        </div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                  {metric.label}
+                </p>
+                <p
+                  className={
+                    metric.accent
+                      ? 'mt-2 text-3xl font-black text-[#ccff00]'
+                      : 'mt-2 text-3xl font-black text-white'
+                  }
+                >
+                  {metric.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Tabs + sort control */}
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
