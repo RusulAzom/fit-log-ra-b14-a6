@@ -1,24 +1,84 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { ArrowDown, ChevronDown, Clock, Flame, Star } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowDown, Check, ChevronDown, Clock, Flame, Star } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { getAllWorkouts } from '../services/api';
 
-const workouts = [
-  { title: 'BARBELL BENCH PRESS', categories: ['CHEST'], equipment: 'Barbell, Bench', duration: '25 min', calories: '180 kcal', rating: '4.8' },
-  { title: 'BACK SQUAT', categories: ['LEGS'], equipment: 'Barbell, Squat Rack', duration: '35 min', calories: '260 kcal', rating: '4.9' },
-  { title: 'CONVENTIONAL DEADLIFT', categories: ['BACK', 'LEGS'], equipment: 'Barbell, Platform', duration: '30 min', calories: '240 kcal', rating: '4.9' },
-  { title: 'OVERHEAD PRESS', categories: ['SHOULDERS'], equipment: 'Barbell', duration: '20 min', calories: '150 kcal', rating: '4.7' },
-  { title: 'WEIGHTED PULL UP', categories: ['BACK'], equipment: 'Pull-up Bar, Belt', duration: '15 min', calories: '120 kcal', rating: '4.8' },
-  { title: 'INCLINE DUMBBELL PRESS', categories: ['CHEST'], equipment: 'Dumbbells, Bench', duration: '22 min', calories: '165 kcal', rating: '4.7' },
-  { title: 'BARBELL CURL', categories: ['ARMS'], equipment: 'Barbell', duration: '18 min', calories: '110 kcal', rating: '4.6' },
-  { title: 'TRICEP DIPS', categories: ['ARMS'], equipment: 'Dip Bars', duration: '15 min', calories: '100 kcal', rating: '4.5' },
-  { title: 'LEG PRESS', categories: ['LEGS', 'GLUTES'], equipment: 'Leg Press Machine', duration: '25 min', calories: '200 kcal', rating: '4.7' },
-  { title: 'SEATED CABLE ROW', categories: ['BACK'], equipment: 'Cable, Bench', duration: '20 min', calories: '140 kcal', rating: '4.6' },
-  { title: 'DUMBBELL LATERAL RAISE', categories: ['SHOULDERS'], equipment: 'Dumbbells', duration: '12 min', calories: '90 kcal', rating: '4.5' },
-  { title: 'HANGING LEG RAISE', categories: ['CORE'], equipment: 'Pull-up Bar', duration: '10 min', calories: '75 kcal', rating: '4.4' },
+const SORT_OPTIONS = [
+  { value: 'duration', label: 'Duration' },
+  { value: 'calories', label: 'Calories' },
+  { value: 'rating', label: 'Rating' },
 ];
 
+const SORT_FIELDS = {
+  duration: 'duration',
+  calories: 'caloriesBurned',
+  rating: 'rating',
+};
+
 export default function Home() {
+  const [workouts, setWorkouts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [sortBy, setSortBy] = useState('duration');
+  const [sortOpen, setSortOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWorkouts() {
+      setLoading(true);
+      setError(false);
+      try {
+        const data = await getAllWorkouts();
+        if (cancelled) return;
+        if (Array.isArray(data) && data.length > 0) {
+          setWorkouts(data);
+        } else {
+          setWorkouts([]);
+          setError(true);
+        }
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadWorkouts();
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
+  useEffect(() => {
+    if (!sortOpen) return;
+    const handleOutsideClick = (event) => {
+      if (!event.target.closest?.('#sort-menu')) setSortOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [sortOpen]);
+
+  const sortedWorkouts = useMemo(() => {
+    const field = SORT_FIELDS[sortBy];
+    return [...workouts].sort((a, b) => (b[field] ?? 0) - (a[field] ?? 0));
+  }, [workouts, sortBy]);
+
+  const selectedLabel = SORT_OPTIONS.find(
+    (option) => option.value === sortBy
+  )?.label;
+
+  const scrollToLibrary = (event) => {
+    event.preventDefault();
+    document.getElementById('library')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <>
       <Navbar />
@@ -41,6 +101,7 @@ export default function Home() {
                 </p>
                 <a
                   href="#library"
+                  onClick={scrollToLibrary}
                   className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#ccff00] px-7 py-4 text-sm font-black uppercase tracking-wide text-black transition hover:brightness-95"
                 >
                   BROWSE WORKOUTS
@@ -77,69 +138,153 @@ export default function Home() {
                 Twelve lifts covering every major muscle group.
               </p>
             </div>
-            <button
-              type="button"
-              className="inline-flex w-fit items-center gap-2 rounded-lg border border-white/15 bg-[#1a1a1a] px-4 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-[#ccff00]/60 hover:text-white"
-            >
-              Sort By: Duration
-              <ChevronDown className="h-4 w-4" />
-            </button>
+
+            {/* Sort dropdown */}
+            <div className="relative" id="sort-menu">
+              <button
+                type="button"
+                onClick={() => setSortOpen((open) => !open)}
+                aria-expanded={sortOpen}
+                aria-haspopup="true"
+                className="inline-flex w-fit items-center gap-2 rounded-lg border border-white/15 bg-[#1a1a1a] px-4 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-[#ccff00]/60 hover:text-white"
+              >
+                Sort By: {selectedLabel}
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    sortOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {sortOpen && (
+                <ul className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-lg border border-white/15 bg-[#18181b] py-1 shadow-xl">
+                  {SORT_OPTIONS.map((option) => (
+                    <li key={option.value}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSortBy(option.value);
+                          setSortOpen(false);
+                        }}
+                        className={`flex w-full items-center justify-between px-4 py-2 text-sm transition hover:bg-white/5 ${
+                          sortBy === option.value
+                            ? 'font-bold text-[#ccff00]'
+                            : 'text-neutral-300'
+                        }`}
+                      >
+                        {option.label}
+                        {sortBy === option.value && (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {workouts.map((workout) => (
-              <article
-                key={workout.title}
-                className="group overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a] transition hover:-translate-y-1 hover:border-[#ccff00]/50"
-              >
-                <div className="relative aspect-[584/287] w-full overflow-hidden">
-                  <Image
-                    src="/imgs/card_banner.png"
-                    alt={workout.title}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover"
-                  />
-                  <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-1.5">
-                    {workout.categories.map((category) => (
-                      <span
-                        key={category}
-                        className="rounded-full bg-[#ccff00] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-black"
-                      >
-                        {category}
-                      </span>
-                    ))}
+          {/* Loading skeleton */}
+          {loading && (
+            <div
+              className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+              aria-hidden="true"
+            >
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="animate-pulse overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a]"
+                >
+                  <div className="aspect-[584/287] w-full bg-white/5" />
+                  <div className="space-y-3 p-5">
+                    <div className="h-4 w-3/4 rounded bg-white/10" />
+                    <div className="h-3 w-1/2 rounded bg-white/5" />
+                    <div className="h-3 w-full rounded bg-white/5" />
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
 
-                <div className="flex flex-col gap-3 p-5">
-                  <div>
+          {/* Error fallback */}
+          {!loading && error && (
+            <div className="mt-8 rounded-2xl border border-white/10 bg-[#1a1a1a] px-6 py-14 text-center">
+              <p className="text-lg font-bold text-white">
+                Couldn&apos;t load the workout library.
+              </p>
+              <p className="mt-2 text-sm text-neutral-400">
+                Something went wrong on our end. Check your connection and try
+                again.
+              </p>
+              <button
+                type="button"
+                onClick={() => setReloadKey((key) => key + 1)}
+                className="mt-6 rounded-full bg-[#ccff00] px-6 py-3 text-sm font-black text-black transition hover:brightness-95"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {/* Workout cards */}
+          {!loading && !error && (
+            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {sortedWorkouts.map((workout) => (
+                <Link
+                  key={workout.id}
+                  href={`/workout/${workout.id}`}
+                  className="group overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a] transition hover:-translate-y-1 hover:border-[#ccff00]/50"
+                >
+                  <div className="relative aspect-[584/287] w-full overflow-hidden">
+                    <Image
+                      src={workout.image}
+                      alt={workout.name}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover"
+                      onError={(event) => {
+                        event.currentTarget.src = '/imgs/workout.jpg';
+                      }}
+                    />
+                    <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-1.5">
+                      {(workout.muscleGroups ?? []).map((group) => (
+                        <span
+                          key={group}
+                          className="rounded-full bg-[#ccff00] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-black"
+                        >
+                          {group}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-5">
                     <h3 className="text-sm font-black uppercase tracking-wide text-white sm:text-base">
-                      {workout.title}
+                      {workout.name}
                     </h3>
                     <p className="mt-1 text-xs text-neutral-500 sm:text-sm">
                       {workout.equipment}
                     </p>
-                  </div>
 
-                  <div className="flex items-center justify-between border-t border-white/10 pt-4 text-xs font-semibold text-neutral-400 sm:text-sm">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4 text-[#ccff00]" />
-                      {workout.duration}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Flame className="h-4 w-4 text-[#ccff00]" />
-                      {workout.calories}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Star className="h-4 w-4 fill-[#ccff00] text-[#ccff00]" />
-                      {workout.rating}
-                    </span>
+                    <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-xs font-semibold text-neutral-400 sm:text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-4 w-4 text-[#ccff00]" />
+                        {workout.duration} min
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Flame className="h-4 w-4 text-[#ccff00]" />
+                        {workout.caloriesBurned} kcal
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Star className="h-4 w-4 fill-[#ccff00] text-[#ccff00]" />
+                        {workout.rating}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </main>
 

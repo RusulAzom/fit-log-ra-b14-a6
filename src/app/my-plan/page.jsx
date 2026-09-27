@@ -1,36 +1,60 @@
+'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Check, Clock, Flame, Star, X } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import EmptyState from '../../components/EmptyState';
+import { useWorkouts } from '../../context/WorkoutContext';
 
-const metrics = [
-  { label: 'Exercises', value: '2', accent: true },
-  { label: 'Minutes', value: '23' },
-  { label: 'Calories', value: '190' },
-];
+const FALLBACK_IMAGE = '/imgs/workout.jpg';
 
-const planItems = [
-  {
-    title: 'RUSSIAN TWIST',
-    equipment: 'Medicine Ball',
-    duration: '15 min',
-    calories: '90 kcal',
-    rating: '4.7',
-    href: '/workout/russian-twist',
-  },
-  {
-    title: 'DEAD BUG',
-    equipment: 'Bodyweight, Mat',
-    duration: '8 min',
-    calories: '100 kcal',
-    rating: '4.6',
-    href: '/workout/dead-bug',
-  },
+const TABS = [
+  { id: 'plan', label: 'Today’s Plan' },
+  { id: 'saved', label: 'Saved' },
 ];
 
 export default function MyPlanPage() {
+  const {
+    plan,
+    saved,
+    completed,
+    hydrated,
+    removeFromPlan,
+    removeFromSaved,
+    markAsDone,
+  } = useWorkouts();
+
+  const [activeTab, setActiveTab] = useState('plan');
+
+  const items = activeTab === 'plan' ? plan : saved;
+
+  const metrics = [
+    { label: 'Exercises', value: plan.length, accent: true },
+    {
+      label: 'Minutes',
+      value: plan.reduce((total, item) => total + (item.duration ?? 0), 0),
+    },
+    {
+      label: 'Calories',
+      value: plan.reduce((total, item) => total + (item.caloriesBurned ?? 0), 0),
+    },
+  ];
+
+  const handleImageError = (event) => {
+    event.currentTarget.src = FALLBACK_IMAGE;
+  };
+
+  const handleRemove = (id) => {
+    if (activeTab === 'plan') {
+      removeFromPlan(id);
+    } else {
+      removeFromSaved(id);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -57,9 +81,11 @@ export default function MyPlanPage() {
                 {metric.label}
               </p>
               <p
-                className={`mt-2 text-3xl font-black ${
-                  metric.accent ? 'text-[#ccff00]' : 'text-white'
-                }`}
+                className={
+                  metric.accent
+                    ? 'mt-2 text-3xl font-black text-[#ccff00]'
+                    : 'mt-2 text-3xl font-black text-white'
+                }
               >
                 {metric.value}
               </p>
@@ -69,86 +95,130 @@ export default function MyPlanPage() {
 
         {/* Tabs */}
         <div className="mt-10 flex items-center gap-2">
-          <button
-            type="button"
-            className="rounded-full bg-[#ccff00] px-5 py-2 text-sm font-bold text-black"
-          >
-            Today&apos;s Plan
-          </button>
-          <button
-            type="button"
-            className="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-neutral-400 transition hover:text-white"
-          >
-            Saved
-          </button>
-        </div>
-
-        {/* Today's Plan — populated state */}
-        <div className="mt-6 flex flex-col gap-4">
-          {planItems.map((item) => (
-            <article
-              key={item.title}
-              className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#18181b] p-4 sm:flex-row sm:items-center"
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              aria-pressed={activeTab === tab.id}
+              className={
+                activeTab === tab.id
+                  ? 'rounded-full bg-[#ccff00] px-5 py-2 text-sm font-bold text-black'
+                  : 'rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-neutral-400 transition hover:text-white'
+              }
             >
-              <Image
-                src="/imgs/workout.jpg"
-                alt={item.title}
-                width={96}
-                height={96}
-                className="h-24 w-24 shrink-0 rounded-xl object-cover"
-              />
-
-              <div className="min-w-0 flex-1">
-                <h2 className="text-base font-black uppercase tracking-wide text-white sm:text-lg">
-                  {item.title}
-                </h2>
-                <p className="mt-0.5 text-sm text-neutral-500">{item.equipment}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-neutral-400 sm:text-sm">
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="h-4 w-4 text-[#ccff00]" />
-                    {item.duration}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Flame className="h-4 w-4 text-[#ccff00]" />
-                    {item.calories}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Star className="h-4 w-4 fill-[#ccff00] text-[#ccff00]" />
-                    {item.rating}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 sm:w-36">
-                <Link
-                  href={item.href}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-[#121212] px-4 py-2.5 text-xs font-bold text-white transition hover:border-[#ccff00]/60 hover:text-[#ccff00] sm:text-sm"
-                >
-                  View Details
-                </Link>
-                <button
-                  type="button"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs font-bold text-emerald-400 transition hover:bg-emerald-500/20 sm:text-sm"
-                >
-                  <Check className="h-4 w-4" />
-                  Mark as Done
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-2.5 text-xs font-bold text-neutral-400 transition hover:border-red-500/40 hover:text-red-400 sm:text-sm"
-                >
-                  <X className="h-4 w-4" />
-                  Remove
-                </button>
-              </div>
-            </article>
+              {tab.label}
+              <span className="ml-2 text-xs opacity-60">
+                {tab.id === 'plan' ? plan.length : saved.length}
+              </span>
+            </button>
           ))}
         </div>
 
-        {/* Saved tab — empty state (shown when a tab has no workouts) */}
-        <div className="mt-6 hidden">
-          <EmptyState />
-        </div>
+        {/* Hydration placeholder */}
+        {!hydrated && (
+          <div className="mt-6 flex flex-col gap-4" aria-busy="true">
+            {[0, 1].map((row) => (
+              <div
+                key={row}
+                className="h-32 w-full animate-pulse rounded-2xl border border-white/10 bg-white/5"
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {hydrated && items.length === 0 && (
+          <div className="mt-6">
+            <EmptyState />
+          </div>
+        )}
+
+        {/* Workout rows */}
+        {hydrated && items.length > 0 && (
+          <div className="mt-6 flex flex-col gap-4">
+            {items.map((item) => {
+              const isDone = completed.includes(item.id);
+
+              return (
+                <article
+                  key={item.id}
+                  className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#18181b] p-4 sm:flex-row sm:items-center"
+                >
+                  <Image
+                    src={item.image || FALLBACK_IMAGE}
+                    alt={item.name}
+                    width={96}
+                    height={96}
+                    className="h-24 w-24 shrink-0 rounded-xl object-cover"
+                    onError={handleImageError}
+                  />
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-black uppercase tracking-wide text-white sm:text-lg">
+                        {item.name}
+                      </h2>
+                      {isDone && (
+                        <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                          Done
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-sm text-neutral-500">
+                      {item.equipment}
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-neutral-400 sm:text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-4 w-4 text-[#ccff00]" />
+                        {item.duration} min
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Flame className="h-4 w-4 text-[#ccff00]" />
+                        {item.caloriesBurned} kcal
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Star className="h-4 w-4 fill-[#ccff00] text-[#ccff00]" />
+                        {item.rating}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:w-36">
+                    <Link
+                      href={'/workout/' + item.id}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-[#121212] px-4 py-2.5 text-xs font-bold text-white transition hover:border-[#ccff00]/60 hover:text-[#ccff00] sm:text-sm"
+                    >
+                      View Details
+                    </Link>
+                    {activeTab === 'plan' && (
+                      <button
+                        type="button"
+                        onClick={() => markAsDone(item.id)}
+                        className={
+                          isDone
+                            ? 'inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/20 px-4 py-2.5 text-xs font-bold text-emerald-300 transition hover:bg-emerald-500/30 sm:text-sm'
+                            : 'inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs font-bold text-emerald-400 transition hover:bg-emerald-500/20 sm:text-sm'
+                        }
+                      >
+                        <Check className="h-4 w-4" />
+                        {isDone ? 'Completed' : 'Mark as Done'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(item.id)}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-2.5 text-xs font-bold text-neutral-400 transition hover:border-red-500/40 hover:text-red-400 sm:text-sm"
+                    >
+                      <X className="h-4 w-4" />
+                      Remove
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </main>
 
       <Footer />

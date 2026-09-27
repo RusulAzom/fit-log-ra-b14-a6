@@ -74,18 +74,18 @@ export default function WorkoutProvider({ children }) {
   };
 
   const markAsDone = (id) => {
+    const isDone = completed.includes(id);
     setCompleted((prev) =>
-      prev.includes(id)
-        ? prev.filter((itemId) => itemId !== id)
-        : [...prev, id]
+      isDone ? prev.filter((itemId) => itemId !== id) : [...prev, id]
     );
-    toast.success('Workout marked as done!');
+    toast.success(isDone ? 'Marked as not done' : 'Workout marked as done!');
   };
 
   const value = {
     plan,
     saved,
     completed,
+    hydrated,
     addToPlan,
     saveForLater,
     removeFromPlan,
