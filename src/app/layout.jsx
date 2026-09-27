@@ -1,17 +1,14 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import { Toaster } from 'react-hot-toast';
+import WorkoutProvider from '../context/WorkoutContext';
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'FitLog — Workout Library',
   description:
     'FitLog is a dark, no-nonsense gym companion: pick a lift, lock it into today’s plan, and watch the week’s work add up.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
@@ -22,7 +19,12 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <WorkoutProvider>
+          {children}
+          <Toaster position="top-right" />
+        </WorkoutProvider>
+      </body>
     </html>
   );
 }
