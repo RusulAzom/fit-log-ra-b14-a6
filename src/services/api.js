@@ -1,20 +1,50 @@
+// Primary endpoint for the FitLog workout library. The alternative endpoint is
+// used automatically whenever the primary one throws, errors or times out.
 const PRIMARY_API = 'https://api.abcz.workers.dev/api/fitlog';
 const FALLBACK_API = 'https://api.api-store.workers.dev/api/fitlog';
 
+// Abandon an endpoint after this long so a stalled request cannot hang the UI.
+const REQUEST_TIMEOUT_MS = 8000;
+
 async function fetchJson(url) {
-  const response = await fetch(url, { next: { revalidate: 60 } });
-  if (!response.ok) {
-    throw new Error(`Request to ${url} failed with status ${response.status}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      next: { revalidate: 60 },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        'Request to ' + url + ' failed with status ' + response.status
+      );
+    }
+
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
   }
-  return response.json();
+}
+
+function assertWorkoutList(data, source) {
+  if (!Array.isArray(data)) {
+    throw new Error(source + ' returned an unexpected payload');
+  }
+
+  return data;
 }
 
 async function requestWorkouts() {
   try {
-    return await fetchJson(PRIMARY_API);
+    const data = await fetchJson(PRIMARY_API);
+    return assertWorkoutList(data, 'Primary API');
   } catch (error) {
     console.error('Primary API failed, falling back to alternative API:', error);
-    return await fetchJson(FALLBACK_API);
+
+    const data = await fetchJson(FALLBACK_API);
+    return assertWorkoutList(data, 'Alternative API');
   }
 }
 

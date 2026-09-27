@@ -42,34 +42,42 @@ export default function WorkoutProvider({ children }) {
   }, [plan, saved, completed, hydrated]);
 
   const addToPlan = (workout) => {
+    if (!workout) return;
+
+    // Duplicates are rejected, and the plan never grows past five lifts.
     if (plan.some((item) => item.id === workout.id)) {
-      toast.error('Already in today’s plan');
+      toast.error("Already in today's plan");
       return;
     }
+
     if (plan.length >= PLAN_LIMIT) {
-      toast.error('Plan is capped at 5 lifts');
+      toast.error('Plan is capped at ' + PLAN_LIMIT + ' lifts');
       return;
     }
-    setPlan([...plan, workout]);
-    toast.success('Added to today’s plan');
+
+    setPlan((prev) => [...prev, workout]);
+    toast.success("Added to today's plan");
   };
 
   const saveForLater = (workout) => {
+    if (!workout) return;
+
     if (saved.some((item) => item.id === workout.id)) {
       toast.error('Already saved for later');
       return;
     }
-    setSaved([...saved, workout]);
+
+    setSaved((prev) => [...prev, workout]);
     toast.success('Saved for later');
   };
 
   const removeFromPlan = (id) => {
-    setPlan(plan.filter((item) => item.id !== id));
+    setPlan((prev) => prev.filter((item) => item.id !== id));
     toast.success('Removed from plan');
   };
 
   const removeFromSaved = (id) => {
-    setSaved(saved.filter((item) => item.id !== id));
+    setSaved((prev) => prev.filter((item) => item.id !== id));
     toast.success('Removed from saved');
   };
 

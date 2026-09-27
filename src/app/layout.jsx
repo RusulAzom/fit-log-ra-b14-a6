@@ -22,7 +22,24 @@ export default function RootLayout({ children }) {
       <body>
         <WorkoutProvider>
           {children}
-          <Toaster position="top-right" />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 2500,
+              style: {
+                background: '#18181b',
+                color: '#f5f5f5',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                fontSize: '14px',
+              },
+              success: {
+                iconTheme: { primary: '#ccff00', secondary: '#000000' },
+              },
+              error: {
+                iconTheme: { primary: '#f87171', secondary: '#000000' },
+              },
+            }}
+          />
         </WorkoutProvider>
       </body>
     </html>
